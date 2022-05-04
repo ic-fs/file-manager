@@ -21,6 +21,7 @@ export function createGrid<T extends { id: string }>() {
     index: number;
     entries: T[];
     activate(): void;
+    focus(): void;
   }
 
   const GridContext = createContext<GridContext | null>(null);
@@ -64,6 +65,8 @@ export function createGrid<T extends { id: string }>() {
     const [contextMenuPosition, setContextMenuPosition] =
       useState<{ clientX: number; clientY: number }>();
 
+    const containerRef = useRef<HTMLDivElement | null>(null);
+
     const contextMenu =
       contextMenuPosition &&
       onContextMenu &&
@@ -76,10 +79,15 @@ export function createGrid<T extends { id: string }>() {
 
     return (
       <div
+        ref={containerRef}
         css={{
+          outline: 0,
           "--highlight-bg": Color.Gray[300],
-          "--highlight-fg": Color.Black,
-          ":focus-within": {
+          ":focus, :focus-within": {
+            outlineColor: Color.Blue[500],
+            outlineStyle: "solid",
+            outlineOffset: 2,
+            outlineWidth: 2,
             "--highlight-bg": Color.Blue[500],
             "--highlight-fg": Color.White,
           },
@@ -87,6 +95,60 @@ export function createGrid<T extends { id: string }>() {
         onContextMenu={(e) => {
           e.preventDefault();
           setContextMenuPosition(e);
+        }}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          const index = selection?.lastIndex ?? -1;
+          let x = index % columns;
+          let y = Math.floor(index / columns);
+
+          switch (e.key) {
+            case "Escape":
+              selection?.clear();
+              return;
+
+            case "ArrowUp":
+              y -= 1;
+              break;
+
+            case "ArrowDown":
+              y += 1;
+              break;
+
+            case "ArrowLeft":
+              x -= 1;
+              break;
+
+            case "ArrowRight":
+              x += 1;
+              break;
+
+            case "a":
+              if (!e.shiftKey && !e.altKey && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                selection?.selectAll();
+              }
+              return;
+
+            default:
+              return;
+          }
+
+          if (x < 0 || x >= columns) {
+            return;
+          }
+
+          const newIndex = y * columns + x;
+          (
+            e.currentTarget.parentElement?.children.item(
+              newIndex
+            ) as HTMLElement | null
+          )?.focus();
+
+          const item = entries?.[newIndex];
+          if (item) {
+            selection?.selectWithKey(item, e.nativeEvent);
+          }
         }}
       >
         <div
@@ -114,6 +176,7 @@ export function createGrid<T extends { id: string }>() {
                   index,
                   entries,
                   activate: () => onActivate?.(entry),
+                  focus: () => containerRef.current?.focus(),
                 }}
               >
                 {children}
@@ -136,7 +199,6 @@ export function createGrid<T extends { id: string }>() {
 
     return (
       <div
-        tabIndex={0}
         onFocus={(e) =>
           !isFocusingProgrammatically &&
           ctx.selection?.selectWithFocus(ctx.entry, e.nativeEvent)
@@ -144,64 +206,10 @@ export function createGrid<T extends { id: string }>() {
         onMouseDown={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          isFocusingProgrammatically = true;
-          e.currentTarget.focus();
-          isFocusingProgrammatically = false;
+          ctx.focus();
           ctx.selection?.selectWithClick(ctx.entry, e.nativeEvent);
         }}
         onDoubleClick={ctx.activate}
-        onKeyDown={(e) => {
-          let x = ctx.index % ctx.columns;
-          let y = Math.floor(ctx.index / ctx.columns);
-
-          switch (e.key) {
-            case "Escape":
-              ctx.selection?.clear();
-              return;
-
-            case "ArrowUp":
-              y -= 1;
-              break;
-
-            case "ArrowDown":
-              y += 1;
-              break;
-
-            case "ArrowLeft":
-              x -= 1;
-              break;
-
-            case "ArrowRight":
-              x += 1;
-              break;
-
-            case "a":
-              if (!e.shiftKey && !e.altKey && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                ctx.selection?.selectAll();
-              }
-              return;
-
-            default:
-              return;
-          }
-
-          if (x < 0 || x >= ctx.columns) {
-            return;
-          }
-
-          const newIndex = y * ctx.columns + x;
-          (
-            e.currentTarget.parentElement?.children.item(
-              newIndex
-            ) as HTMLElement | null
-          )?.focus();
-
-          const item = ctx.entries[newIndex];
-          if (item) {
-            ctx.selection?.selectWithKey(item, e.nativeEvent);
-          }
-        }}
         css={{
           flexBasis: ctx.size,
           flexGrow: 0,

@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useState } from "react";
+import { createContext, ReactNode, useContext, useRef, useState } from "react";
 import { Selection } from "../Browser/Selection.js";
 import { ContextMenu } from "../ContextMenu.jsx";
 import { Color } from "../Primitives/Color.jsx";
@@ -42,6 +42,8 @@ export function createTable<T extends { id: string }>() {
     const [contextMenuPosition, setContextMenuPosition] =
       useState<{ clientX: number; clientY: number }>();
 
+    const containerRef = useRef<HTMLDivElement | null>(null);
+
     const contextMenu =
       contextMenuPosition &&
       onContextMenu &&
@@ -54,10 +56,16 @@ export function createTable<T extends { id: string }>() {
 
     return (
       <div
+        ref={containerRef}
         css={{
+          outline: 0,
           "--highlight-bg": Color.Gray[300],
           "--highlight-fg": Color.Black,
-          ":focus-within": {
+          ":focus, :focus-within": {
+            outlineColor: Color.Blue[500],
+            outlineStyle: "solid",
+            outlineOffset: 2,
+            outlineWidth: 2,
             "--highlight-bg": Color.Blue[500],
             "--highlight-fg": Color.White,
           },
@@ -65,6 +73,29 @@ export function createTable<T extends { id: string }>() {
         onContextMenu={(e) => {
           e.preventDefault();
           setContextMenuPosition(e);
+        }}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          switch (e.key) {
+            case "Escape":
+              selection?.clear();
+              break;
+
+            case "ArrowUp":
+              selection?.selectPreviousWithKey(e.nativeEvent);
+              break;
+
+            case "ArrowDown":
+              selection?.selectNextWithKey(e.nativeEvent);
+              break;
+
+            case "a":
+              if (!e.shiftKey && !e.altKey && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                selection?.selectAll();
+              }
+              break;
+          }
         }}
       >
         <table
@@ -77,13 +108,9 @@ export function createTable<T extends { id: string }>() {
             <tr>{inContext({ position: Position.InHeader })}</tr>
           </thead>
           <tbody>
-            {rows?.map((row, i) => (
+            {rows?.map((row) => (
               <tr
                 key={row.id}
-                tabIndex={0}
-                css={{
-                  outline: 0,
-                }}
                 onDoubleClick={() => onActivate?.(row)}
                 onFocus={(e) =>
                   !isFocusingProgrammatically &&
@@ -93,46 +120,9 @@ export function createTable<T extends { id: string }>() {
                   e.preventDefault();
                   e.stopPropagation();
                   isFocusingProgrammatically = true;
-                  e.currentTarget.focus();
+                  containerRef.current?.focus();
                   isFocusingProgrammatically = false;
                   selection?.selectWithClick(row, e.nativeEvent);
-                }}
-                onKeyDown={(e) => {
-                  switch (e.key) {
-                    case "Escape":
-                      selection?.clear();
-                      break;
-
-                    case "ArrowUp":
-                      (
-                        e.currentTarget
-                          .previousElementSibling as HTMLElement | null
-                      )?.focus();
-                      if (rows[i - 1]) {
-                        selection?.selectWithKey(rows[i - 1], e.nativeEvent);
-                      }
-                      break;
-
-                    case "ArrowDown":
-                      (
-                        e.currentTarget.nextElementSibling as HTMLElement | null
-                      )?.focus();
-                      if (rows[i + 1]) {
-                        selection?.selectWithKey(rows[i + 1], e.nativeEvent);
-                      }
-                      break;
-
-                    case "a":
-                      if (
-                        !e.shiftKey &&
-                        !e.altKey &&
-                        (e.metaKey || e.ctrlKey)
-                      ) {
-                        e.preventDefault();
-                        selection?.selectAll();
-                      }
-                      break;
-                  }
                 }}
               >
                 {inContext({ position: Position.InBody, row, selection })}

@@ -3,11 +3,14 @@ import { useRef, useState } from "react";
 export interface Selection<T> {
   selectWithClick(item: T, event: MouseEvent): void;
   selectWithKey(item: T, event: KeyboardEvent): void;
+  selectPreviousWithKey(event: KeyboardEvent): void;
+  selectNextWithKey(event: KeyboardEvent): void;
   selectWithFocus(item: T, event: FocusEvent): void;
   selectAll(): void;
   clear(): void;
   isSelected(item: T): boolean;
   selected(): T[];
+  readonly lastIndex: number;
 }
 
 export function useSelection<T extends { id: string }>(
@@ -16,6 +19,7 @@ export function useSelection<T extends { id: string }>(
   const [selectedIds, setSelectedIds] = useState(new Set<string>());
 
   const lastIndex = useRef<number>(-1);
+  const anchorIndex = useRef<number>(-1);
 
   function selectWithKey(item: T, event: KeyboardEvent) {
     event.preventDefault();
@@ -26,22 +30,41 @@ export function useSelection<T extends { id: string }>(
 
       if (event.metaKey || event.ctrlKey) {
         newSet.add(item.id);
-        lastIndex.current = index;
-      } else if (event.shiftKey && lastIndex.current >= 0) {
+        lastIndex.current = anchorIndex.current = index;
+      } else if (event.shiftKey && anchorIndex.current >= 0) {
         newSet.clear();
-        const start = Math.min(index, lastIndex.current);
-        const end = Math.max(index, lastIndex.current);
+        const start = Math.min(index, anchorIndex.current);
+        const end = Math.max(index, anchorIndex.current);
 
         for (let i = start; i <= end; i++) {
           newSet.add(items[i].id);
         }
+        lastIndex.current = index;
       } else {
         newSet.clear();
         newSet.add(item.id);
-        lastIndex.current = index;
+        lastIndex.current = anchorIndex.current = index;
       }
       return newSet;
     });
+  }
+
+  function selectPreviousWithKey(event: KeyboardEvent) {
+    if (lastIndex.current < 1) {
+      return;
+    }
+
+    const prevIndex = lastIndex.current - 1;
+    selectWithKey(items[prevIndex]!, event);
+  }
+
+  function selectNextWithKey(event: KeyboardEvent) {
+    if (lastIndex.current >= items.length - 1) {
+      return;
+    }
+
+    const nextIndex = lastIndex.current + 1;
+    selectWithKey(items[nextIndex]!, event);
   }
 
   function selectWithClick(item: T, event: MouseEvent) {
@@ -60,19 +83,20 @@ export function useSelection<T extends { id: string }>(
         } else {
           newSet.add(item.id);
         }
-      } else if (event.shiftKey && lastIndex.current >= 0) {
-        const start = Math.min(index, lastIndex.current);
-        const end = Math.max(index, lastIndex.current);
+      } else if (event.shiftKey && anchorIndex.current >= 0) {
+        const start = Math.min(index, anchorIndex.current);
+        const end = Math.max(index, anchorIndex.current);
 
         for (let i = start; i <= end; i++) {
           newSet.add(items[i].id);
         }
+        lastIndex.current = index;
       } else {
         newSet.clear();
         newSet.add(item.id);
       }
 
-      lastIndex.current = index;
+      lastIndex.current = anchorIndex.current = index;
 
       return newSet;
     });
@@ -100,11 +124,16 @@ export function useSelection<T extends { id: string }>(
 
   return {
     selectWithClick,
+    selectPreviousWithKey,
+    selectNextWithKey,
     selectWithKey,
     selectAll,
     selectWithFocus,
     isSelected,
     clear,
     selected,
+    get lastIndex() {
+      return lastIndex.current;
+    },
   };
 }
