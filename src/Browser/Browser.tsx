@@ -8,7 +8,7 @@ import { useSelection, Selection } from "./Selection.js";
 
 export function createBrowser<T extends { id: string }>() {
   const { Table, Column } = createTable<T>();
-  const { Grid, Entry } = createGrid<T>();
+  const { Grid, Field } = createGrid<T>();
 
   function Browser({
     view,
@@ -68,5 +68,5 @@ export function createBrowser<T extends { id: string }>() {
     }
   }
 
-  return { Browser, TableColumn: Column, GridEntry: Entry };
+  return { Browser, TableColumn: Column, GridField: Field };
 }

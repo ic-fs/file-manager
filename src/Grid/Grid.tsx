@@ -15,13 +15,6 @@ let isFocusingProgrammatically = false;
 export function createGrid<T extends { id: string }>() {
   interface GridContext {
     entry: T;
-    selection?: Selection<T>;
-    size: number;
-    columns: number;
-    index: number;
-    entries: T[];
-    activate(): void;
-    focus(): void;
   }
 
   const GridContext = createContext<GridContext | null>(null);
@@ -32,6 +25,7 @@ export function createGrid<T extends { id: string }>() {
     selection,
     columnWidth = 100,
     columnGap = 10,
+    fieldGap = 4,
     onActivate,
     onContextMenu,
   }: {
@@ -40,6 +34,7 @@ export function createGrid<T extends { id: string }>() {
     selection?: Selection<T>;
     columnWidth?: number;
     columnGap?: number;
+    fieldGap?: number;
     onActivate?: (entry: T) => void;
     onContextMenu?: (entries: T[]) => ContextMenu;
   }) {
@@ -83,11 +78,13 @@ export function createGrid<T extends { id: string }>() {
         css={{
           outline: 0,
           "--highlight-bg": Color.Gray[300],
-          ":focus, :focus-within": {
+          ":focus": {
             outlineColor: Color.Blue[500],
             outlineStyle: "solid",
             outlineOffset: 2,
             outlineWidth: 2,
+          },
+          ":focus, :focus-within": {
             "--highlight-bg": Color.Blue[500],
             "--highlight-fg": Color.White,
           },
@@ -165,23 +162,48 @@ export function createGrid<T extends { id: string }>() {
               gap: columnGap,
             }}
           >
-            {entries?.map((entry, index) => (
-              <GridContext.Provider
-                key={entry.id}
-                value={{
-                  entry,
-                  selection,
-                  size: columnWidth,
-                  columns,
-                  index,
-                  entries,
-                  activate: () => onActivate?.(entry),
-                  focus: () => containerRef.current?.focus(),
-                }}
-              >
-                {children}
-              </GridContext.Provider>
-            ))}
+            {entries?.map((entry) => {
+              const isSelected = selection?.isSelected(entry) || false;
+
+              return (
+                <GridContext.Provider
+                  key={entry.id}
+                  value={{
+                    entry,
+                  }}
+                >
+                  <div
+                    onFocus={(e) =>
+                      !isFocusingProgrammatically &&
+                      selection?.selectWithFocus(entry, e.nativeEvent)
+                    }
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      containerRef.current?.focus();
+                      selection?.selectWithClick(entry, e.nativeEvent);
+                    }}
+                    onDoubleClick={() => onActivate?.(entry)}
+                    css={{
+                      flexBasis: columnWidth,
+                      flexGrow: 0,
+                      flexShrink: 0,
+                      background: isSelected
+                        ? "var(--highlight-bg)"
+                        : "transparent",
+                      color: isSelected ? "var(--highlight-fg)" : "inherit",
+                      cursor: "default",
+                      outline: 0,
+                      padding: 8,
+                      borderRadius: 4,
+                      gap: fieldGap,
+                    }}
+                  >
+                    {children}
+                  </div>
+                </GridContext.Provider>
+              );
+            })}
           </div>
         </div>
         {contextMenu}
@@ -189,43 +211,14 @@ export function createGrid<T extends { id: string }>() {
     );
   }
 
-  function Entry({ children }: { children: (entry: T) => ReactNode }) {
+  function Field({ children }: { children: (entry: T) => ReactNode }) {
     const ctx = useContext(GridContext);
     if (ctx == null) {
       return null;
     }
 
-    const isSelected = ctx.selection?.isSelected(ctx.entry) || false;
-
-    return (
-      <div
-        onFocus={(e) =>
-          !isFocusingProgrammatically &&
-          ctx.selection?.selectWithFocus(ctx.entry, e.nativeEvent)
-        }
-        onMouseDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          ctx.focus();
-          ctx.selection?.selectWithClick(ctx.entry, e.nativeEvent);
-        }}
-        onDoubleClick={ctx.activate}
-        css={{
-          flexBasis: ctx.size,
-          flexGrow: 0,
-          flexShrink: 0,
-          background: isSelected ? "var(--highlight-bg)" : "transparent",
-          color: isSelected ? "var(--highlight-fg)" : "inherit",
-          cursor: "default",
-          outline: 0,
-          padding: 8,
-          borderRadius: 4,
-        }}
-      >
-        {children(ctx.entry)}
-      </div>
-    );
+    return <div>{children(ctx.entry)}</div>;
   }
 
-  return { Grid, Entry };
+  return { Grid, Field };
 }

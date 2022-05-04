@@ -61,11 +61,13 @@ export function createTable<T extends { id: string }>() {
           outline: 0,
           "--highlight-bg": Color.Gray[300],
           "--highlight-fg": Color.Black,
-          ":focus, :focus-within": {
+          ":focus": {
             outlineColor: Color.Blue[500],
             outlineStyle: "solid",
             outlineOffset: 2,
             outlineWidth: 2,
+          },
+          ":focus, :focus-within": {
             "--highlight-bg": Color.Blue[500],
             "--highlight-fg": Color.White,
           },
@@ -110,6 +112,11 @@ export function createTable<T extends { id: string }>() {
           <tbody>
             {rows?.map((row) => (
               <tr
+                css={{
+                  ":nth-child(2n - 1)": {
+                    background: Color.Gray[200],
+                  },
+                }}
                 key={row.id}
                 onDoubleClick={() => onActivate?.(row)}
                 onFocus={(e) =>
@@ -138,9 +145,11 @@ export function createTable<T extends { id: string }>() {
   function Column({
     header,
     children,
+    width,
   }: {
     header?: ReactNode;
     children: (row: T) => ReactNode;
+    width?: number | string;
   }) {
     const ctx = useContext(TableContext);
     if (ctx == null) {
@@ -154,6 +163,8 @@ export function createTable<T extends { id: string }>() {
             css={{
               textAlign: "left",
               padding: 8,
+              boxSizing: "content-box",
+              width,
 
               ":first-of-type": {
                 paddingLeft: 18,
@@ -174,6 +185,8 @@ export function createTable<T extends { id: string }>() {
               color: isSelected ? "var(--highlight-fg)" : "inherit",
               cursor: "default",
               padding: 8,
+              boxSizing: "content-box",
+              width,
 
               ":first-of-type": {
                 paddingLeft: 18,

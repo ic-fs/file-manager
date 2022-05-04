@@ -65,7 +65,8 @@ export function createSelect<T>() {
         css={{
           background: selected ? Color.Gray[200] : Color.White,
           color: selected ? Color.Black : Color.Gray[800],
-          padding: 4,
+          paddingBlock: 6,
+          paddingInline: 8,
         }}
       >
         <input
