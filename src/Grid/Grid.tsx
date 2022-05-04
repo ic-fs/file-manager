@@ -7,7 +7,10 @@ import {
   useState,
 } from "react";
 import { Selection } from "../Browser/Selection.js";
+import { ContextMenu } from "../ContextMenu.jsx";
 import { Color } from "../Primitives/Color.jsx";
+
+let isFocusingProgrammatically = false;
 
 export function createGrid<T extends { id: string }>() {
   interface GridContext {
@@ -17,6 +20,7 @@ export function createGrid<T extends { id: string }>() {
     columns: number;
     index: number;
     entries: T[];
+    activate(): void;
   }
 
   const GridContext = createContext<GridContext | null>(null);
@@ -27,12 +31,16 @@ export function createGrid<T extends { id: string }>() {
     selection,
     columnWidth = 100,
     columnGap = 10,
+    onActivate,
+    onContextMenu,
   }: {
     children?: ReactNode;
     entries?: T[];
     selection?: Selection<T>;
     columnWidth?: number;
     columnGap?: number;
+    onActivate?: (entry: T) => void;
+    onContextMenu?: (entries: T[]) => ContextMenu;
   }) {
     const gridRef = useRef<HTMLDivElement | null>(null);
 
@@ -53,10 +61,22 @@ export function createGrid<T extends { id: string }>() {
       return () => ro.disconnect();
     }, []);
 
+    const [contextMenuPosition, setContextMenuPosition] =
+      useState<{ clientX: number; clientY: number }>();
+
+    const contextMenu =
+      contextMenuPosition &&
+      onContextMenu &&
+      selection &&
+      ContextMenu.at(
+        onContextMenu(selection.selected()),
+        contextMenuPosition,
+        () => setContextMenuPosition(undefined)
+      );
+
     return (
       <div
         css={{
-          padding: 10,
           "--highlight-bg": Color.Gray[300],
           "--highlight-fg": Color.Black,
           ":focus-within": {
@@ -64,31 +84,44 @@ export function createGrid<T extends { id: string }>() {
             "--highlight-fg": Color.White,
           },
         }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setContextMenuPosition(e);
+        }}
       >
         <div
-          ref={gridRef}
           css={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            gap: columnGap,
+            padding: 10,
           }}
+          onMouseDown={() => selection?.clear()}
         >
-          {entries?.map((entry, index) => (
-            <GridContext.Provider
-              key={entry.id}
-              value={{
-                entry,
-                selection,
-                size: columnWidth,
-                columns,
-                index,
-                entries,
-              }}
-            >
-              {children}
-            </GridContext.Provider>
-          ))}
+          <div
+            ref={gridRef}
+            css={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: columnGap,
+            }}
+          >
+            {entries?.map((entry, index) => (
+              <GridContext.Provider
+                key={entry.id}
+                value={{
+                  entry,
+                  selection,
+                  size: columnWidth,
+                  columns,
+                  index,
+                  entries,
+                  activate: () => onActivate?.(entry),
+                }}
+              >
+                {children}
+              </GridContext.Provider>
+            ))}
+          </div>
         </div>
+        {contextMenu}
       </div>
     );
   }
@@ -104,33 +137,51 @@ export function createGrid<T extends { id: string }>() {
     return (
       <div
         tabIndex={0}
+        onFocus={(e) =>
+          !isFocusingProgrammatically &&
+          ctx.selection?.selectWithFocus(ctx.entry, e.nativeEvent)
+        }
         onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          isFocusingProgrammatically = true;
           e.currentTarget.focus();
+          isFocusingProgrammatically = false;
           ctx.selection?.selectWithClick(ctx.entry, e.nativeEvent);
         }}
+        onDoubleClick={ctx.activate}
         onKeyDown={(e) => {
           let x = ctx.index % ctx.columns;
           let y = Math.floor(ctx.index / ctx.columns);
 
           switch (e.key) {
+            case "Escape":
+              ctx.selection?.clear();
+              return;
+
             case "ArrowUp":
               y -= 1;
               break;
+
             case "ArrowDown":
               y += 1;
               break;
+
             case "ArrowLeft":
               x -= 1;
               break;
+
             case "ArrowRight":
               x += 1;
               break;
+
             case "a":
               if (!e.shiftKey && !e.altKey && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
                 ctx.selection?.selectAll();
               }
               return;
+
             default:
               return;
           }

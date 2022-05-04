@@ -3,8 +3,11 @@ import { useRef, useState } from "react";
 export interface Selection<T> {
   selectWithClick(item: T, event: MouseEvent): void;
   selectWithKey(item: T, event: KeyboardEvent): void;
+  selectWithFocus(item: T, event: FocusEvent): void;
   selectAll(): void;
+  clear(): void;
   isSelected(item: T): boolean;
+  selected(): T[];
 }
 
 export function useSelection<T extends { id: string }>(
@@ -42,11 +45,10 @@ export function useSelection<T extends { id: string }>(
   }
 
   function selectWithClick(item: T, event: MouseEvent) {
-    if (event.button !== 0) {
+    event.preventDefault();
+    if (event.button !== 0 && selectedIds.has(item.id)) {
       return;
     }
-
-    event.preventDefault();
     setSelectedIds((set) => {
       const newSet = new Set(set);
 
@@ -76,6 +78,10 @@ export function useSelection<T extends { id: string }>(
     });
   }
 
+  function selectWithFocus(item: T, _event: FocusEvent) {
+    setSelectedIds(new Set([item.id]));
+  }
+
   function isSelected(item: T) {
     return selectedIds.has(item.id);
   }
@@ -84,5 +90,21 @@ export function useSelection<T extends { id: string }>(
     setSelectedIds(new Set(items.map((i) => i.id)));
   }
 
-  return { selectWithClick, selectWithKey, selectAll, isSelected };
+  function clear() {
+    setSelectedIds(new Set());
+  }
+
+  function selected() {
+    return items.filter((i) => selectedIds.has(i.id));
+  }
+
+  return {
+    selectWithClick,
+    selectWithKey,
+    selectAll,
+    selectWithFocus,
+    isSelected,
+    clear,
+    selected,
+  };
 }
