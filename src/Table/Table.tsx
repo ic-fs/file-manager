@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useContext, useRef, useState } from "react";
 import { Selection } from "../Browser/Selection.js";
 import { ContextMenu } from "../ContextMenu.jsx";
+import { useDropZone } from "../DropZone.jsx";
 import { Color } from "../Primitives/Color.jsx";
 
 let isFocusingProgrammatically = false;
@@ -28,13 +29,19 @@ export function createTable<T extends { id: string }>() {
     rows,
     selection,
     onActivate,
+    onPreview,
     onContextMenu,
+    onAcceptDrop,
+    onDrop,
   }: {
     children?: ReactNode;
     rows?: T[];
     selection?: Selection<T>;
     onActivate?: (row: T) => void;
+    onPreview?: (entries: T[]) => void;
     onContextMenu?: (rows: T[]) => ContextMenu;
+    onAcceptDrop?: (dataTransfer: DataTransfer) => boolean;
+    onDrop?: (dataTransfer: DataTransfer) => void;
   }) {
     const inContext = (ctx: TableContext) => (
       <TableContext.Provider value={ctx}>{children}</TableContext.Provider>
@@ -53,6 +60,8 @@ export function createTable<T extends { id: string }>() {
         contextMenuPosition,
         () => setContextMenuPosition(undefined)
       );
+
+    useDropZone(containerRef, onDrop, onAcceptDrop);
 
     return (
       <div
@@ -97,6 +106,10 @@ export function createTable<T extends { id: string }>() {
                 selection?.selectAll();
               }
               break;
+
+            case " ":
+              onPreview?.(selection?.selected() ?? []);
+              break;
           }
         }}
       >
@@ -113,7 +126,7 @@ export function createTable<T extends { id: string }>() {
             {rows?.map((row) => (
               <tr
                 css={{
-                  ":nth-child(2n - 1)": {
+                  ":nth-of-type(2n - 1)": {
                     background: Color.Gray[200],
                   },
                 }}

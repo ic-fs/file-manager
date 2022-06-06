@@ -1,36 +1,34 @@
-import { cloneElement, ReactElement, useState } from "react";
+import { useMemo, useState } from "react";
 import { createBrowser } from "../../Browser/Browser.jsx";
 import { DirectoryView } from "../../Browser/DirectoryView.js";
 import { ContextMenu } from "../../ContextMenu.jsx";
 import { Txt } from "../../Primitives/Txt.jsx";
 import * as Feather from "react-feather";
+import { Box, BoxManager } from "@ic-fs/box";
+import { Button } from "../../Primitives/Button.jsx";
+import { Color } from "../../Primitives/Color.jsx";
+import { useAgent } from "../../Identity.jsx";
+import { useNavigate } from "react-router-dom";
 
-interface Box {
-  id: string;
-  name: string;
-  otherField: number;
-  icon: ReactElement<Feather.IconProps, Feather.Icon>;
-}
-
-const { Browser, TableColumn, GridField } = createBrowser<Box>();
+const { Browser, TableColumn, GridField, ToolbarItem } = createBrowser<Box>();
 
 export function BoxesPage() {
   const [view, setView] = useState<DirectoryView>(() => DirectoryView.Grid);
+
+  const agent = useAgent();
+
+  const boxManager = useMemo(() => BoxManager.withAgent(agent), [agent]);
+
+  const [boxes, setBoxes] = useState<Box[]>([]);
+
+  const navigate = useNavigate();
 
   return (
     <Browser
       view={view}
       onChangeView={(v) => setView(() => v)}
-      onActivate={console.log}
-      entries={[
-        { id: "1", name: "One", otherField: 123, icon: <Feather.Box /> },
-        { id: "2", name: "Two", otherField: 534, icon: <Feather.Box /> },
-        { id: "3", name: "Three", otherField: 654, icon: <Feather.Box /> },
-        { id: "4", name: "Four", otherField: 144, icon: <Feather.Box /> },
-        { id: "5", name: "Five", otherField: 674, icon: <Feather.Box /> },
-        { id: "6", name: "Six", otherField: 911, icon: <Feather.Box /> },
-        { id: "7", name: "Seven", otherField: 1446, icon: <Feather.Box /> },
-      ]}
+      onActivate={(box) => navigate(`/${box.id}/`)}
+      entries={boxes}
       onContextMenu={(entries) => (
         <ContextMenu>
           <ContextMenu.Item>
@@ -43,14 +41,47 @@ export function BoxesPage() {
         </ContextMenu>
       )}
     >
+      <ToolbarItem>
+        <Button
+          onClick={async () => {
+            const box = await boxManager.create();
+            setBoxes((bb) => bb.concat(box));
+          }}
+        >
+          <div
+            css={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 2,
+              paddingInline: 8,
+              paddingBlock: 6,
+              borderRadius: 4,
+              borderColor: Color.Blue[300],
+              borderStyle: "solid",
+              borderWidth: 1,
+              background: Color.Blue[200],
+              color: Color.Blue[600],
+              transition: "50ms background",
+
+              ":hover": {
+                background: Color.Blue[100],
+              },
+            }}
+          >
+            <Feather.Plus size={12} />
+            <Txt.Body>New Box</Txt.Body>
+          </div>
+        </Button>
+      </ToolbarItem>
+
       <GridField>
-        {(entry) => (
+        {() => (
           <div
             css={{
               alignItems: "center",
             }}
           >
-            {cloneElement(entry.icon, { size: 40 })}
+            <Feather.Box size={40} />
           </div>
         )}
       </GridField>
@@ -58,21 +89,15 @@ export function BoxesPage() {
       <GridField>
         {(entry) => (
           <div css={{ textAlign: "center" }}>
-            <Txt.Body>{entry.name + "!"}</Txt.Body>
+            <Txt.Body>{entry.id}</Txt.Body>
           </div>
         )}
       </GridField>
 
-      <TableColumn width={1}>
-        {(entry) => <div>{cloneElement(entry.icon, { size: "1em" })}</div>}
-      </TableColumn>
+      <TableColumn width={1}>{() => <Feather.Box size={20} />}</TableColumn>
 
       <TableColumn header={<Txt.H6>Name</Txt.H6>}>
-        {(box) => <Txt.Body>{box.name}</Txt.Body>}
-      </TableColumn>
-
-      <TableColumn header={<Txt.H6>Some Value</Txt.H6>}>
-        {(box) => <Txt.Body>{box.otherField}</Txt.Body>}
+        {(box) => <Txt.Body>{box.id}</Txt.Body>}
       </TableColumn>
     </Browser>
   );

@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { createContext, ReactNode, useContext } from "react";
 import { ContextMenu } from "../ContextMenu.jsx";
 import { createGrid } from "../Grid/Grid.jsx";
 import { createTable } from "../Table/Table.jsx";
@@ -10,38 +10,65 @@ export function createBrowser<T extends { id: string }>() {
   const { Table, Column } = createTable<T>();
   const { Grid, Field } = createGrid<T>();
 
+  const BrowserContext = createContext(false);
+
   function Browser({
     view,
     onChangeView,
     children,
     entries,
     onActivate,
+    onPreview,
     onContextMenu,
+    onAcceptDrop,
+    onDrop,
   }: {
     view: DirectoryView;
     children?: ReactNode;
     entries?: T[];
     onActivate?: (entry: T) => void;
+    onPreview?: (entries: T[]) => void;
     onChangeView?: (view: DirectoryView) => void;
     onContextMenu?: (entries: T[]) => ContextMenu;
+    onAcceptDrop?: (dataTransfer: DataTransfer) => boolean;
+    onDrop?: (dataTransfer: DataTransfer) => void;
   }) {
     const selection = useSelection(entries);
 
     return (
       <div>
-        <div css={{ flexDirection: "row", padding: 10 }}>
+        <div css={{ flexDirection: "row", padding: 10, gap: 10 }}>
           <div css={{ flex: "1 1 auto" }} />
+
+          <BrowserContext.Provider value>{children}</BrowserContext.Provider>
 
           {onChangeView && (
             <DirectoryViewInput value={view} onChange={onChangeView} />
           )}
         </div>
 
-        <Body entries={entries} view={view} selection={selection} onActivate={onActivate} onContextMenu={onContextMenu}>
+        <Body
+          entries={entries}
+          view={view}
+          selection={selection}
+          onActivate={onActivate}
+          onContextMenu={onContextMenu}
+          onAcceptDrop={onAcceptDrop}
+          onDrop={onDrop}
+          onPreview={onPreview}
+        >
           {children}
         </Body>
       </div>
     );
+  }
+
+  function ToolbarItem({ children }: { children?: ReactNode }) {
+    if (!useContext(BrowserContext)) {
+      return null;
+    }
+
+    return <>{children}</>;
   }
 
   function Body({
@@ -50,23 +77,53 @@ export function createBrowser<T extends { id: string }>() {
     children,
     selection,
     onActivate,
+    onPreview,
     onContextMenu,
+    onAcceptDrop,
+    onDrop,
   }: {
     view: DirectoryView;
     entries?: T[];
     children?: ReactNode;
     selection: Selection<T>;
     onActivate?: (entry: T) => void;
+    onPreview?: (entries: T[]) => void;
     onContextMenu?: (entries: T[]) => ContextMenu;
+    onAcceptDrop?: (dataTransfer: DataTransfer) => boolean;
+    onDrop?: (dataTransfer: DataTransfer) => void;
   }) {
     switch (view) {
       case DirectoryView.Grid:
-        return <Grid onActivate={onActivate} entries={entries} selection={selection} onContextMenu={onContextMenu}>{children}</Grid>;
+        return (
+          <Grid
+            onActivate={onActivate}
+            onPreview={onPreview}
+            entries={entries}
+            selection={selection}
+            onContextMenu={onContextMenu}
+            onAcceptDrop={onAcceptDrop}
+            onDrop={onDrop}
+          >
+            {children}
+          </Grid>
+        );
 
       case DirectoryView.Table:
-        return <Table onActivate={onActivate} rows={entries} selection={selection} onContextMenu={onContextMenu}>{children}</Table>;
+        return (
+          <Table
+            onActivate={onActivate}
+            onPreview={onPreview}
+            rows={entries}
+            selection={selection}
+            onContextMenu={onContextMenu}
+            onAcceptDrop={onAcceptDrop}
+            onDrop={onDrop}
+          >
+            {children}
+          </Table>
+        );
     }
   }
 
-  return { Browser, TableColumn: Column, GridField: Field };
+  return { Browser, TableColumn: Column, GridField: Field, ToolbarItem };
 }

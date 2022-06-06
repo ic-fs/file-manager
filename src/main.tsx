@@ -1,3 +1,5 @@
+/// <reference types="vite/client.js" />
+
 import { createRoot } from "react-dom/client";
 import { App } from "./App.jsx";
 import "./Primitives/prelude.js";

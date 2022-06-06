@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Selection } from "../Browser/Selection.js";
 import { ContextMenu } from "../ContextMenu.jsx";
+import { useDropZone } from "../DropZone.jsx";
 import { Color } from "../Primitives/Color.jsx";
 
 let isFocusingProgrammatically = false;
@@ -27,7 +28,10 @@ export function createGrid<T extends { id: string }>() {
     columnGap = 10,
     fieldGap = 4,
     onActivate,
+    onPreview,
     onContextMenu,
+    onAcceptDrop,
+    onDrop,
   }: {
     children?: ReactNode;
     entries?: T[];
@@ -36,7 +40,10 @@ export function createGrid<T extends { id: string }>() {
     columnGap?: number;
     fieldGap?: number;
     onActivate?: (entry: T) => void;
+    onPreview?: (entries: T[]) => void;
     onContextMenu?: (entries: T[]) => ContextMenu;
+    onAcceptDrop?: (dataTransfer: DataTransfer) => boolean;
+    onDrop?: (dataTransfer: DataTransfer) => void;
   }) {
     const gridRef = useRef<HTMLDivElement | null>(null);
 
@@ -48,7 +55,10 @@ export function createGrid<T extends { id: string }>() {
       }
 
       const ro = new ResizeObserver(() => {
-        const { width } = gridRef.current!.getBoundingClientRect();
+        if (gridRef.current == null) {
+          return;
+        }
+        const { width } = gridRef.current.getBoundingClientRect();
         setColumns(
           Math.floor((width - columnWidth) / (columnWidth + columnGap) + 1)
         );
@@ -71,6 +81,8 @@ export function createGrid<T extends { id: string }>() {
         contextMenuPosition,
         () => setContextMenuPosition(undefined)
       );
+
+    useDropZone(containerRef, onDrop, onAcceptDrop);
 
     return (
       <div
@@ -125,6 +137,10 @@ export function createGrid<T extends { id: string }>() {
                 e.preventDefault();
                 selection?.selectAll();
               }
+              return;
+
+            case " ":
+              onPreview?.(selection?.selected() ?? []);
               return;
 
             default:

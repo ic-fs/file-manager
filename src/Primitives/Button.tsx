@@ -1,6 +1,6 @@
 import { CSSObject } from "@emotion/react";
 import { MouseEventHandler, ReactNode } from "react";
-import { Color } from "./Color";
+import { Color } from "./Color.jsx";
 
 export function Button({
   children,

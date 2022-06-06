@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { PageLoading } from "./Loading";
+import { PageLoading } from "./Loading.jsx";
 
 const StorefrontPage = lazy(() =>
   import("./Pages/StorefrontPage.jsx").then((m) => ({
@@ -29,7 +29,7 @@ export function App() {
 
           <Route path="boxes" element={<BoxesPage />} />
 
-          <Route path=":canisterId" element={<BoxPage />} />
+          <Route path=":canisterId/*" element={<BoxPage />} />
         </Routes>
       </BrowserRouter>
     </Suspense>
