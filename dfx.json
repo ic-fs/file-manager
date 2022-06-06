@@ -5,6 +5,10 @@
       "source": [
         "dist/"
       ]
+    },
+    "index": {
+      "type": "motoko",
+      "main": "src/Index/Main.mo"
     }
   }
 }

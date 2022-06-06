@@ -1,25 +1,21 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createBrowser } from "../../Browser/Browser.jsx";
 import { DirectoryView } from "../../Browser/DirectoryView.js";
 import { ContextMenu } from "../../ContextMenu.jsx";
 import { Txt } from "../../Primitives/Txt.jsx";
 import * as Feather from "react-feather";
-import { Box, BoxManager } from "@ic-fs/box";
+import { Box } from "@ic-fs/box";
 import { Button } from "../../Primitives/Button.jsx";
 import { Color } from "../../Primitives/Color.jsx";
-import { useAgent } from "../../Identity.jsx";
 import { useNavigate } from "react-router-dom";
+import { useIndex } from "../../Index/useIndex.js";
 
 const { Browser, TableColumn, GridField, ToolbarItem } = createBrowser<Box>();
 
 export function BoxesPage() {
   const [view, setView] = useState<DirectoryView>(() => DirectoryView.Grid);
 
-  const agent = useAgent();
-
-  const boxManager = useMemo(() => BoxManager.withAgent(agent), [agent]);
-
-  const [boxes, setBoxes] = useState<Box[]>([]);
+  const { isLoading, boxes, create } = useIndex();
 
   const navigate = useNavigate();
 
@@ -42,12 +38,7 @@ export function BoxesPage() {
       )}
     >
       <ToolbarItem>
-        <Button
-          onClick={async () => {
-            const box = await boxManager.create();
-            setBoxes((bb) => bb.concat(box));
-          }}
-        >
+        <Button onClick={create}>
           <div
             css={{
               flexDirection: "row",

@@ -10,6 +10,7 @@ export function createTable<T extends { id: string }>() {
   enum Position {
     InHeader,
     InBody,
+    InEmptyBody,
   }
 
   type TableContext =
@@ -20,6 +21,9 @@ export function createTable<T extends { id: string }>() {
         position: Position.InBody;
         row: T;
         selection?: Selection<T>;
+      }
+    | {
+        position: Position.InEmptyBody;
       };
 
   const TableContext = createContext<TableContext | null>(null);
@@ -119,9 +123,11 @@ export function createTable<T extends { id: string }>() {
           }}
           onMouseDown={() => selection?.clear()}
         >
-          <thead>
-            <tr>{inContext({ position: Position.InHeader })}</tr>
-          </thead>
+          {rows?.length! > 0 && (
+            <thead>
+              <tr>{inContext({ position: Position.InHeader })}</tr>
+            </thead>
+          )}
           <tbody>
             {rows?.map((row) => (
               <tr
@@ -148,11 +154,28 @@ export function createTable<T extends { id: string }>() {
                 {inContext({ position: Position.InBody, row, selection })}
               </tr>
             ))}
+
+            {!(rows?.length! > 0) && (
+              <tr>
+                <td colSpan={Number.MAX_SAFE_INTEGER} css={{ padding: 10 }}>
+                  {inContext({ position: Position.InEmptyBody })}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
         {contextMenu}
       </div>
     );
+  }
+
+  function IfEmpty({ children }: { children?: ReactNode }) {
+    const ctx = useContext(TableContext);
+    if (ctx?.position !== Position.InEmptyBody) {
+      return null;
+    }
+
+    return <>{children}</>;
   }
 
   function Column({
@@ -209,8 +232,11 @@ export function createTable<T extends { id: string }>() {
             {children(ctx.row)}
           </td>
         );
+
+      case Position.InEmptyBody:
+        return null;
     }
   }
 
-  return { Table, Column };
+  return { Table, Column, IfEmpty };
 }

@@ -7,8 +7,8 @@ import { DirectoryViewInput } from "./DirectoryViewInput.jsx";
 import { useSelection, Selection } from "./Selection.js";
 
 export function createBrowser<T extends { id: string }>() {
-  const { Table, Column } = createTable<T>();
-  const { Grid, Field } = createGrid<T>();
+  const { Table, Column, IfEmpty: IfTableEmpty } = createTable<T>();
+  const { Grid, Field, IfEmpty: IfGridEmpty } = createGrid<T>();
 
   const BrowserContext = createContext(false);
 
@@ -71,6 +71,15 @@ export function createBrowser<T extends { id: string }>() {
     return <>{children}</>;
   }
 
+  function IfEmpty({ children }: { children?: ReactNode }) {
+    return (
+      <>
+        <IfTableEmpty>{children}</IfTableEmpty>
+        <IfGridEmpty>{children}</IfGridEmpty>
+      </>
+    );
+  }
+
   function Body({
     view,
     entries,
@@ -125,5 +134,11 @@ export function createBrowser<T extends { id: string }>() {
     }
   }
 
-  return { Browser, TableColumn: Column, GridField: Field, ToolbarItem };
+  return {
+    Browser,
+    TableColumn: Column,
+    GridField: Field,
+    ToolbarItem,
+    IfEmpty,
+  };
 }

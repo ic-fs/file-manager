@@ -15,7 +15,7 @@ let isFocusingProgrammatically = false;
 
 export function createGrid<T extends { id: string }>() {
   interface GridContext {
-    entry: T;
+    entry?: T;
   }
 
   const GridContext = createContext<GridContext | null>(null);
@@ -220,6 +220,18 @@ export function createGrid<T extends { id: string }>() {
                 </GridContext.Provider>
               );
             })}
+
+            {!(entries?.length! > 0) && (
+              <div
+                css={{
+                  flex: "1 1 100%",
+                }}
+              >
+                <GridContext.Provider value={{}}>
+                  {children}
+                </GridContext.Provider>
+              </div>
+            )}
           </div>
         </div>
         {contextMenu}
@@ -227,14 +239,27 @@ export function createGrid<T extends { id: string }>() {
     );
   }
 
-  function Field({ children }: { children: (entry: T) => ReactNode }) {
+  function IfEmpty({ children }: { children?: ReactNode }) {
     const ctx = useContext(GridContext);
     if (ctx == null) {
+      return null;
+    }
+
+    if (ctx.entry != null) {
+      return null;
+    }
+
+    return <>{children}</>;
+  }
+
+  function Field({ children }: { children: (entry: T) => ReactNode }) {
+    const ctx = useContext(GridContext);
+    if (ctx?.entry == null) {
       return null;
     }
 
     return <div>{children(ctx.entry)}</div>;
   }
 
-  return { Grid, Field };
+  return { Grid, Field, IfEmpty };
 }

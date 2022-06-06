@@ -10,7 +10,7 @@ import { Loading } from "../../Loading.jsx";
 import { Color } from "../../Primitives/Color.jsx";
 import { Txt } from "../../Primitives/Txt.jsx";
 
-const { Browser, TableColumn, GridField } = createBrowser<
+const { Browser, TableColumn, GridField, IfEmpty } = createBrowser<
   Entry & { id: string }
 >();
 
@@ -197,6 +197,19 @@ export function BoxPage() {
         <TableColumn header={<Txt.H6>Name</Txt.H6>}>
           {(entry) => <Txt.Body>{entry.name}</Txt.Body>}
         </TableColumn>
+
+        <IfEmpty>
+          {isLoading ? (
+            <Loading size={30} fadeIn />
+          ) : (
+            <div css={{ alignItems: "center", padding: 30 }}>
+              <Txt.Body>
+                This box is empty. Drag and drop some files to add them to the
+                box.
+              </Txt.Body>
+            </div>
+          )}
+        </IfEmpty>
       </Browser>
     </>
   );

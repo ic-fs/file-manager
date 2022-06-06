@@ -14,10 +14,11 @@ export default defineConfig(async ({ mode }) => ({
     global: "globalThis",
     DEV_PEM:
       mode === "development" ? JSON.stringify(await getDevPem()) : undefined,
+    INDEX_CANISTER_ID: JSON.stringify(await getIndexCanisterId(mode)),
   },
   server: {
     fs: {
-      allow: ["./src", "../box/src"],
+      allow: ["./src", "../box/src", "./.dfx"],
     },
     proxy: {
       "/api": {
@@ -30,7 +31,7 @@ export default defineConfig(async ({ mode }) => ({
 
 async function getDevPem() {
   const pem = await readFile(
-    "/Users/emilbroman/.config/dfx/identity/default/identity.pem",
+    `${process.env.HOME}/.config/dfx/identity/default/identity.pem`,
     "utf-8"
   );
 
@@ -47,4 +48,16 @@ async function getDevPem() {
   return JSON.stringify(
     Ed25519KeyIdentity.fromKeyPair(pair.publicKey, pair.secretKey)
   );
+}
+
+async function getIndexCanisterId(mode: string) {
+  const json = await readFile(
+    mode === "development"
+      ? "./.dfx/local/canister_ids.json"
+      : "canister_ids.json",
+    "utf-8"
+  );
+
+  const { index } = JSON.parse(json);
+  return mode === "development" ? index.local : index.ic;
 }
